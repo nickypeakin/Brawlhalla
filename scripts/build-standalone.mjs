@@ -1,7 +1,8 @@
-// Bundles the client into one self-contained HTML file (dist/brawlheim.html)
-// for offline play: local battles and bots, no game server needed.
+// Bundles the client into one self-contained HTML file (play.html) for
+// offline play: local battles and bots, no game server needed. Open it
+// straight from disk or from any static host.
 import { build } from 'esbuild';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,15 +20,23 @@ const css = await readFile(path.join(ROOT, 'public/style.css'), 'utf8');
 let html = await readFile(path.join(ROOT, 'public/index.html'), 'utf8');
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>'))
   .replace(/<script type="module" src="\/js\/main.js"><\/script>/, '');
-html = `<title>Brawlheim</title>
+html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brawlheim</title>
 <style>
 :root { color-scheme: dark; }
 ${css}
 </style>
+</head>
+<body>
 ${body}
 <script>window.BRAWL_STANDALONE = true;</script>
 <script>${js}</script>
+</body>
+</html>
 `;
-await mkdir(path.join(ROOT, 'dist'), { recursive: true });
-await writeFile(path.join(ROOT, 'dist/brawlheim.html'), html);
-console.log(`dist/brawlheim.html (${(html.length / 1024).toFixed(0)} KB)`);
+await writeFile(path.join(ROOT, 'play.html'), html);
+console.log(`play.html (${(html.length / 1024).toFixed(0)} KB)`);
