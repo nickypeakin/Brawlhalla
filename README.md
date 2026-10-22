@@ -15,6 +15,8 @@ npm start          # http://localhost:3000
 * **Create Private Room** gives you a 4-letter code and an invite link (`?room=CODE`) to send to friends.
 * **Local Battle** is 1–4 players on one machine, with any mix of keyboard, gamepads and bots.
 
+`npm run build:standalone` bundles the game into a single offline file, `dist/brawlheim.html`. It has local play and bots but no online multiplayer, and needs no server.
+
 Up to 4 fighters per match. Modes are free-for-all or 2v2 teams, with 1–5 stocks and an optional time limit. People who join a match already in progress spectate it.
 
 To play with friends over the internet, deploy the server anywhere that runs Node and supports WebSockets (Render, Railway, Fly.io, a VPS…). A `Dockerfile` is included and the server honours `PORT`. For the same Wi-Fi, friends open `http://<your-LAN-ip>:3000`.

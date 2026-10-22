@@ -6,7 +6,7 @@ canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: b
   background: radial-gradient(ellipse at center, rgba(40,20,90,0.55), rgba(5,5,20,0.88)); }
 .screen > :first-child { margin-top: auto; }
 .screen > :last-child { margin-bottom: auto; }
-.hidden { display: none !important; }
+.hidden, [hidden] { display: none !important; }
 .logo { font-size: clamp(48px, 10vw, 110px); margin: 0; font-weight: 900; letter-spacing: 2px; color: #ffd23f;
   text-shadow: 0 6px 0 #b8470f, 0 10px 30px rgba(0,0,0,0.6); -webkit-text-stroke: 3px #3a1240; font-style: italic; }
 .logo span { color: #ff5d5d; }

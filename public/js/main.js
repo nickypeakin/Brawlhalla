@@ -318,7 +318,15 @@ renderer.quiet = true;
 show('menu');
 requestAnimationFrame(frame);
 
-const qRoom = new URLSearchParams(location.search).get('room');
+// Standalone build (single HTML file, no game server): offline play only.
+const STANDALONE = !!window.BRAWL_STANDALONE;
+if (STANDALONE) {
+  $('btn-quick').hidden = true;
+  $('online-row').hidden = true;
+  $('btn-local').classList.add('primary');
+  $('status').textContent = 'Online play needs the Brawlheim server (npm start). This page has local play and bots.';
+}
+const qRoom = !STANDALONE && new URLSearchParams(location.search).get('room');
 if (qRoom) { $('code').value = qRoom.toUpperCase(); online({ t: 'join', code: qRoom.toUpperCase() }); }
 
 // handy for debugging from the console: brawl.session.stats()
