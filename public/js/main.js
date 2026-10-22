@@ -309,14 +309,44 @@ function frame(now) {
   requestAnimationFrame(frame);
   try { tick(now); } catch (err) { showCrash(err); }
 }
+// Self-check: if the screen stays blank during a match, retry on a fresh
+// low-resolution canvas, and if that is blank too, say so on screen.
+let nextCheck = 0, blankChecks = 0, framesDrawn = 0;
+function canvasLooksBlank() {
+  const cv = renderer.cv, ctx = renderer.ctx;
+  const pts = [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.5, 0.2], [0.3, 0.7]];
+  return pts.every(([fx, fy]) => {
+    const d = ctx.getImageData(Math.floor(cv.width * fx), Math.floor(cv.height * fy), 1, 1).data;
+    return d[3] === 0 || d[0] + d[1] + d[2] < 30;
+  });
+}
+function checkScreen(now) {
+  framesDrawn++;
+  if (now < nextCheck) return;
+  nextCheck = now + 2000;
+  if (!canvasLooksBlank()) { blankChecks = 0; return; }
+  blankChecks++;
+  if (blankChecks === 1) {
+    const old = renderer.cv, cv = old.cloneNode();
+    old.replaceWith(cv);
+    renderer.cv = cv;
+    renderer.ctx = cv.getContext('2d');
+    renderer.lowRes = true;
+  } else if (blankChecks === 2) {
+    const ver = (navigator.userAgent.match(/(Chrome|Firefox|Version)\/[\d.]+/) || ['unknown browser'])[0];
+    showCrash(`the game screen is not drawing (${ver}, screen ${innerWidth}x${innerHeight}, canvas ${renderer.cv.width}x${renderer.cv.height}, ${framesDrawn} frames)`);
+  }
+}
+
 function tick(now) {
-  const dt = Math.min(100, now - last);
+  const dt = Math.max(0, Math.min(100, now - last));
   last = now;
   const sess = session || demo;
   if (sess) {
     sess.update(dt);
     const v = sess.view();
     renderer.draw(v.s, v.evs, dt, { net: session instanceof OnlineSession ? session.stats() : null });
+    if (sess === session) checkScreen(now);
     if (sess === demo && v.s.phase === 2 && v.s.endT > 180) startDemo();
     if (sess === session && mode === 'local' && v.s.phase === 2 && v.s.endT > 200) showResults(v.s, session.cfg, false);
   }
