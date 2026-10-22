@@ -8,6 +8,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MAPS, LEGENDS, ST, PH, moveOf, weaponOf, FPS } from '/shared/sim.js';
 import { sfx as SFX } from './audio.js';
 import { PLAYER_COLORS, TEAM_COLORS, damageColor } from './render.js';
+import { Post } from './post.js';
 
 const MUTE = new Proxy({}, { get: () => () => {} });
 const K = 1 / 40; // sim pixels -> world units: a fighter is 1.8 units tall
@@ -372,13 +373,16 @@ class Particles {
 export class Renderer3D {
   constructor(canvas) {
     this.cv = canvas;
-    this.gl = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    // same setup as fears-to-fathom: no anti-aliasing on the canvas itself,
+    // the scene is drawn into a multisampled HDR target and post.js finishes it
+    this.gl = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
-    this.gl.toneMapping = THREE.ACESFilmicToneMapping;
-    this.gl.toneMappingExposure = 1.05;
+    this.gl.toneMapping = THREE.NoToneMapping;
     this.gl.shadowMap.enabled = true;
-    this.gl.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.pixelRatio = Math.min(1.75, window.devicePixelRatio || 1);
+    this.gl.shadowMap.type = THREE.PCFShadowMap;
+    this.post = new Post(this.gl);
+    this.post.configure({ maxDpr: 1.5, samples: 2, bloom: true });
+    this.quality = 1;
     this.slow = 0;
     const pmrem = new THREE.PMREMGenerator(this.gl);
     this.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -425,7 +429,7 @@ export class Renderer3D {
     s.add(sun, sun.target);
 
     // sun / moon disc and its glow, far behind the stage
-    const disc = new THREE.Mesh(new THREE.SphereGeometry(7, 24, 16), new THREE.MeshBasicMaterial({ color: th.sun, fog: false }));
+    const disc = new THREE.Mesh(new THREE.SphereGeometry(7, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(th.sun).multiplyScalar(2.2), fog: false }));
     disc.position.set(...th.sunPos);
     s.add(disc);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: th.sun, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.8 }));
@@ -699,12 +703,11 @@ export class Renderer3D {
     const W = innerWidth, H = innerHeight;
     // adaptive resolution: drop it if frames are slow
     this.slow = this.slow * 0.97 + (dt > 26 ? 1 : 0) * 0.03;
-    if (this.slow > 0.6 && this.pixelRatio > 0.75) { this.pixelRatio = Math.max(0.75, this.pixelRatio - 0.25); this.slow = 0; }
-    const sizeKey = `${W}x${H}@${this.pixelRatio}`;
+    if (this.slow > 0.6 && this.quality > 0.6) { this.quality = Math.max(0.6, this.quality - 0.1); this.slow = 0; }
+    const sizeKey = `${W}x${H}@${this.quality}`;
     if (sizeKey !== this.sizeKey) {
       this.sizeKey = sizeKey;
-      this.gl.setPixelRatio(this.pixelRatio);
-      this.gl.setSize(W, H, false);
+      this.post.setSize(W, H, this.quality);
     }
     this.camera.aspect = W / Math.max(1, H);
     this.handleEvents(s, evs);
@@ -754,10 +757,10 @@ export class Renderer3D {
       if (f.kind === 'ring') { f.m.scale.setScalar(f.size * (1.15 - u)); f.m.material.opacity = u; }
       else { f.m.scale.set(4 * u + 0.5, 60, 4 * u + 0.5); f.m.material.opacity = u * 0.9; }
     }
-    this.sparks.mat.uniforms.scale.value = (H * this.pixelRatio) / (2 * tanH);
+    this.sparks.mat.uniforms.scale.value = this.post.u.res.value.y / (2 * tanH);
     this.smoke.mat.uniforms.scale.value = this.sparks.mat.uniforms.scale.value;
 
-    this.gl.render(this.scene, this.camera);
+    this.post.render(target => { this.gl.setRenderTarget(target); this.gl.render(this.scene, this.camera); });
     this.updateHud(s, hud, dt);
   }
 

@@ -2,7 +2,7 @@
 // offline play: local battles and bots, no game server needed. Open it
 // straight from disk or from any static host.
 import { build } from 'esbuild';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,4 +39,9 @@ ${body}
 </html>
 `;
 await writeFile(path.join(ROOT, 'play.html'), html);
-console.log(`play.html (${(html.length / 1024).toFixed(0)} KB)`);
+// dist/ is what GitHub Pages serves (see .github/workflows/pages.yml)
+await rm(path.join(ROOT, 'dist'), { recursive: true, force: true });
+await mkdir(path.join(ROOT, 'dist'), { recursive: true });
+await writeFile(path.join(ROOT, 'dist/index.html'), html);
+await writeFile(path.join(ROOT, 'dist/.nojekyll'), '');
+console.log(`play.html and dist/index.html (${(html.length / 1024).toFixed(0)} KB)`);
