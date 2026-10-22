@@ -1,6 +1,6 @@
 # Brawlheim
 
-A Brawlhalla-style platform fighter that runs in the browser, with **online multiplayer using rollback netcode**, couch co-op (shared keyboard + up to 4 gamepads) and bots.
+A Brawlhalla-style 3D platform fighter that runs in the browser, with **online multiplayer using rollback netcode**, couch co-op (shared keyboard + up to 4 gamepads) and bots.
 
 ![menu](docs/screenshot.png)
 
@@ -39,6 +39,16 @@ Like Brawlhalla:
 * You can wall-cling and wall-jump, fast-fall, drop through soft platforms, and dodge in any direction.
 * Getting hit refreshes your jumps, dodge and recovery.
 
+## Graphics
+
+The game draws in 3D with [three.js](https://threejs.org), in the same style as [nickypeakin/backrooms](https://github.com/nickypeakin/backrooms):
+* realistic-looking (physically based) materials
+* soft shadows, plus a room environment map for reflections
+* jointed characters built from simple shapes
+* every texture generated in code, so there are no asset files
+
+If a computer can't run WebGL, the game falls back to the 2D renderer automatically.
+
 ## How the multiplayer works
 
 The netcode borrows techniques from games known for good online play:
@@ -71,7 +81,8 @@ npm test
 server.js            HTTP + WebSocket server, lobbies, authoritative input relay
 shared/sim.js        the game: physics, moves, weapons, legends, maps, bots (shared by server & browser)
 public/js/session.js local session, online rollback session, network wrapper
-public/js/render.js  canvas renderer: characters, stages, effects, HUD
+public/js/render3d.js 3D renderer (three.js): characters, stages, effects, HTML HUD
+public/js/render.js  2D canvas renderer, used when WebGL isn't available
 public/js/main.js    menus, lobby, game loop
 public/js/input.js   keyboard & gamepad
 public/js/audio.js   synthesized sound effects (no assets needed)

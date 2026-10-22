@@ -1,6 +1,7 @@
 import './compat.js';
 import { LEGENDS, MAPS, ST } from '/shared/sim.js';
 import { Renderer, drawPreview, PLAYER_COLORS, TEAM_COLORS } from './render.js';
+import { Renderer3D } from './render3d.js';
 import { Net, LocalSession, OnlineSession } from './session.js';
 import { DEVICES, connectedPads } from './input.js';
 import { unlockAudio, setMuted, muted, sfx } from './audio.js';
@@ -11,7 +12,19 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 
-const renderer = new Renderer($('game'));
+// 3D (three.js) when WebGL works, otherwise the 2D canvas renderer.
+let renderer;
+try { renderer = new Renderer3D($('game')); } catch (err) { console.warn('3D graphics unavailable, using 2D', err); renderer = new Renderer($('game')); }
+function fallbackTo2D(err) {
+  console.warn('3D renderer failed, switching to 2D', err);
+  const old = renderer;
+  const cv = old.cv.cloneNode();
+  old.cv.replaceWith(cv);
+  if (old.hud) old.hud.remove();
+  renderer = new Renderer(cv);
+  renderer.quiet = old.quiet;
+  if (old.cfg) renderer.reset(old.cfg, old.me);
+}
 let net = null, room = null, session = null, screen = 'menu', myId = 0;
 let mode = 'menu'; // menu | local | online
 let demo = null;
@@ -307,7 +320,10 @@ addEventListener('error', e => showCrash(e.error || e.message));
 let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
-  try { tick(now); } catch (err) { showCrash(err); }
+  try { tick(now); } catch (err) {
+    if (renderer instanceof Renderer3D) fallbackTo2D(err);
+    else showCrash(err);
+  }
 }
 // Self-check: if the screen stays blank during a match, retry on a fresh
 // low-resolution canvas, and if that is blank too, say so on screen.
@@ -346,7 +362,8 @@ function tick(now) {
     sess.update(dt);
     const v = sess.view();
     renderer.draw(v.s, v.evs, dt, { net: session instanceof OnlineSession ? session.stats() : null });
-    if (sess === session) checkScreen(now);
+    if (sess === session && !(renderer instanceof Renderer3D)) checkScreen(now);
+    if (renderer instanceof Renderer3D && renderer.lost) fallbackTo2D('WebGL context lost');
     if (sess === demo && v.s.phase === 2 && v.s.endT > 180) startDemo();
     if (sess === session && mode === 'local' && v.s.phase === 2 && v.s.endT > 200) showResults(v.s, session.cfg, false);
   }

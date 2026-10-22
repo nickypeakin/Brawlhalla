@@ -13,6 +13,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "three": "0.170.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

@@ -31,9 +31,15 @@ const server = http.createServer(async (req, res) => {
   let url;
   try { url = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400); return res.end(); }
   if (url === '/') url = '/index.html';
-  const isShared = url.startsWith('/shared/');
-  const base = path.join(ROOT, isShared ? 'shared' : 'public');
-  const file = path.normalize(path.join(base, isShared ? url.slice(7) : url));
+  // /shared/* is the simulation, /vendor/three/* is three.js from node_modules
+  const routes = [
+    ['/shared/', path.join(ROOT, 'shared')],
+    ['/vendor/three/addons/', path.join(ROOT, 'node_modules/three/examples/jsm')],
+    ['/vendor/three/', path.join(ROOT, 'node_modules/three/build')],
+  ];
+  const route = routes.find(([prefix]) => url.startsWith(prefix));
+  const base = route ? route[1] : path.join(ROOT, 'public');
+  const file = path.normalize(path.join(base, route ? url.slice(route[0].length - 1) : url));
   if (!file.startsWith(base + path.sep)) { res.writeHead(403); return res.end(); }
   try {
     const data = await readFile(file);
