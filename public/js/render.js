@@ -25,9 +25,11 @@ export function damageColor(d) {
 }
 
 export class Renderer {
-  constructor(canvas) {
+  constructor(canvas, opts = {}) {
     this.cv = canvas;
-    this.ctx = canvas.getContext('2d');
+    // software: keep the canvas on the CPU (works when the graphics card path doesn't)
+    this.ctx = canvas.getContext('2d', opts.software ? { willReadFrequently: true } : undefined);
+    this.lowRes = !!opts.software;
     this.cam = { x: 0, y: -150, z: 0.6 };
     this.parts = [];
     this.shake = 0;

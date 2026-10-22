@@ -12,18 +12,47 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 
-// 3D (three.js) when WebGL works, otherwise the 2D canvas renderer.
-let renderer;
-try { renderer = new Renderer3D($('game')); } catch (err) { console.warn('3D graphics unavailable, using 2D', err); renderer = new Renderer($('game')); }
-function fallbackTo2D(err) {
-  console.warn('3D renderer failed, switching to 2D', err);
+// Graphics modes: 3D (three.js/WebGL), 2D (canvas), and safe mode (2D drawn
+// on the CPU at lower resolution, for computers where the GPU path shows black).
+const GFX = { '3d': '3D', '2d': '2D', safe: 'Safe mode' };
+let gfx = GFX[store.get('gfx', '3d')] ? store.get('gfx', '3d') : '3d';
+function makeRenderer(m, canvas) {
+  if (m === '3d') {
+    try { return new Renderer3D(canvas); } catch (err) { console.warn('3D graphics unavailable, using 2D', err); }
+  }
+  return new Renderer(canvas, { software: m === 'safe' });
+}
+let renderer = makeRenderer(gfx, $('game'));
+function setGraphics(m) {
   const old = renderer;
   const cv = old.cv.cloneNode();
   old.cv.replaceWith(cv);
   if (old.hud) old.hud.remove();
-  renderer = new Renderer(cv);
+  renderer = makeRenderer(m, cv);
   renderer.quiet = old.quiet;
   if (old.cfg) renderer.reset(old.cfg, old.me);
+  gfx = m;
+  store.set('gfx', m);
+  $('gfx').value = m;
+  if (mode === 'local' || mode === 'online') showGfxHint();
+}
+function cycleGraphics() {
+  const order = Object.keys(GFX);
+  const next = order[(order.indexOf(gfx) + 1) % order.length];
+  setGraphics(next);
+  toast(`Graphics: ${GFX[next]}`);
+}
+function fallbackTo2D(err) {
+  console.warn('3D renderer failed, switching to 2D', err);
+  setGraphics('2d');
+}
+let hintTimer = 0;
+function showGfxHint() {
+  const h = $('gfx-hint');
+  h.textContent = `Black screen? Switch graphics (G) · now: ${GFX[gfx]}`;
+  h.hidden = false;
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { h.hidden = true; }, 20000);
 }
 let net = null, room = null, session = null, screen = 'menu', myId = 0;
 let mode = 'menu'; // menu | local | online
@@ -116,6 +145,7 @@ function onStart(m) {
   renderer.quiet = false;
   renderer.reset(m.cfg, m.slot);
   show('none');
+  showGfxHint();
   if (m.slot < 0) toast('Spectating match in progress');
 }
 
@@ -250,6 +280,7 @@ function startLocal(cfg) {
   renderer.quiet = false;
   renderer.reset(cfg, lastLocal.devices.findIndex(d => d));
   show('none');
+  showGfxHint();
 }
 
 // ------------------------------------------------------------ results & menus
@@ -303,6 +334,10 @@ function togglePause(v) {
   show(on ? 'pause' : 'none');
 }
 addEventListener('keydown', e => { if (e.code === 'Escape' || e.code === 'KeyP' && mode === 'local') togglePause(); });
+addEventListener('keydown', e => { if (e.code === 'KeyG' && (mode === 'local' || mode === 'online') && !(e.target instanceof HTMLInputElement)) cycleGraphics(); });
+$('gfx-hint').onclick = cycleGraphics;
+$('gfx').value = gfx;
+$('gfx').onchange = e => setGraphics(e.target.value);
 
 // ------------------------------------------------------------ main loop
 // Show crashes on screen instead of silently freezing.

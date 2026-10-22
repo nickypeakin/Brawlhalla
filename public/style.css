@@ -77,3 +77,5 @@ button.on { background: #2e9b55; box-shadow: 0 4px 0 #165a2f; }
 .h3-net { position: absolute; top: 10px; left: 12px; font: 12px ui-monospace, monospace; color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px #000; }
 .h3-banner { position: absolute; top: 40%; left: 50%; font-size: clamp(64px, 12vw, 140px); font-weight: 900; font-style: italic; -webkit-text-stroke: 5px #1a1030; text-shadow: 0 8px 0 rgba(0,0,0,0.35); white-space: nowrap; }
 @media (max-width: 760px) { .h3-card { width: auto; padding-right: 8px; } .h3-name, .h3-foot .h3-wpn { display: none; } .h3-port { flex-basis: 36px; height: 36px; font-size: 16px; } .h3-dmg { font-size: 20px; } }
+#gfx-hint { position: fixed; left: 12px; top: 40px; z-index: 6; padding: 8px 12px; font-size: 13px; background: rgba(20,14,50,0.85); border: 2px solid #ffd23f; box-shadow: none; }
+#gfx { min-width: 0; flex: 1; }
