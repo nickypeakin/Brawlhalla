@@ -45,3 +45,42 @@ await mkdir(path.join(ROOT, 'dist'), { recursive: true });
 await writeFile(path.join(ROOT, 'dist/index.html'), html);
 await writeFile(path.join(ROOT, 'dist/.nojekyll'), '');
 console.log(`play.html and dist/index.html (${(html.length / 1024).toFixed(0)} KB)`);
+
+// test.html: the graphics test page (see public/js/gfxtest.js)
+const test = await build({
+  entryPoints: [path.join(ROOT, 'public/js/gfxtest.js')],
+  bundle: true, write: false, format: 'iife', minify: true, target: ['chrome64', 'firefox62', 'safari12'],
+});
+const testHtml = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brawlheim Graphics Test</title>
+<style>
+:root { color-scheme: dark; }
+body { margin: 0; padding: 16px; background: #0d0b1e; color: #f2f0ff; font-family: system-ui, sans-serif; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+.lead { margin: 0 0 14px; opacity: 0.85; }
+#tests { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.test { background: #1d173f; border: 2px solid #4a3a8a; border-radius: 12px; padding: 10px; }
+.test h3 { margin: 0 0 8px; font-size: 14px; }
+.test canvas, .test img { display: block; width: 240px; height: 150px; max-width: 100%; background: #000; border-radius: 6px; }
+.expect { margin: 6px 0 0; font-size: 12px; opacity: 0.8; }
+.res { margin: 4px 0 0; font-size: 12px; }
+.ok { color: #7be08a; } .bad { color: #ff7b7b; }
+#info { white-space: pre-wrap; font: 12px ui-monospace, monospace; background: #000; padding: 10px; border-radius: 8px; margin-top: 14px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<h1>Brawlheim graphics test</h1>
+<p class="lead">Each box draws a picture a different way. Take a screenshot of this whole page and send it, so we can see which ones show up black on your computer.</p>
+<div id="tests"></div>
+<div id="info"></div>
+<script>${test.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script>
+</body>
+</html>
+`;
+await writeFile(path.join(ROOT, 'test.html'), testHtml);
+await writeFile(path.join(ROOT, 'dist/test.html'), testHtml);
+console.log(`test.html (${(testHtml.length / 1024).toFixed(0)} KB)`);
