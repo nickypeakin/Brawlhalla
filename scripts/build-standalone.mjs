@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = await build({
   entryPoints: [path.join(ROOT, 'public/js/main.js')],
-  bundle: true, write: false, format: 'iife', minify: true, target: 'es2020',
+  bundle: true, write: false, format: 'iife', minify: true, target: ['chrome64', 'firefox62', 'safari12'],
   plugins: [{
     name: 'shared',
     setup(b) { b.onResolve({ filter: /^\/shared\// }, a => ({ path: path.join(ROOT, a.path) })); },

@@ -1,3 +1,4 @@
+import './compat.js';
 import { LEGENDS, MAPS, ST } from '/shared/sim.js';
 import { Renderer, drawPreview, PLAYER_COLORS, TEAM_COLORS } from './render.js';
 import { Net, LocalSession, OnlineSession } from './session.js';
@@ -291,8 +292,24 @@ function togglePause(v) {
 addEventListener('keydown', e => { if (e.code === 'Escape' || e.code === 'KeyP' && mode === 'local') togglePause(); });
 
 // ------------------------------------------------------------ main loop
+// Show crashes on screen instead of silently freezing.
+let crashed = false;
+function showCrash(err) {
+  console.error(err);
+  if (crashed) return;
+  crashed = true;
+  clearTimeout(toastTimer);
+  $('toast').textContent = `Something went wrong: ${err && err.message ? err.message : err}`;
+  $('toast').classList.add('show');
+}
+addEventListener('error', e => showCrash(e.error || e.message));
+
 let last = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame);
+  try { tick(now); } catch (err) { showCrash(err); }
+}
+function tick(now) {
   const dt = Math.min(100, now - last);
   last = now;
   const sess = session || demo;
@@ -310,7 +327,6 @@ function frame(now) {
       drawPreview(cv, +cv.dataset.preview, cv.dataset.color, f, Math.floor(now / 1800) % 3 - 1);
     }
   }
-  requestAnimationFrame(frame);
 }
 
 startDemo();
