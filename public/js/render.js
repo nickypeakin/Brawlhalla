@@ -57,9 +57,10 @@ export class Renderer {
   resize() {
     let dpr = this.lowRes ? 1 : Math.min(2, window.devicePixelRatio || 1);
     // keep the backing store a sane size (huge canvases can silently fail on low-memory devices)
-    const maxPx = this.lowRes ? 1280 * 720 : 3840 * 2160, px = innerWidth * innerHeight * dpr * dpr;
+    const cw = this.cv.clientWidth || innerWidth, ch = this.cv.clientHeight || innerHeight;
+    const maxPx = this.lowRes ? 1280 * 720 : 3840 * 2160, px = cw * ch * dpr * dpr;
     if (px > maxPx) dpr *= Math.sqrt(maxPx / px);
-    const w = Math.floor(innerWidth * dpr), h = Math.floor(innerHeight * dpr);
+    const w = Math.floor(cw * dpr), h = Math.floor(ch * dpr);
     if (this.cv.width !== w || this.cv.height !== h) { this.cv.width = w; this.cv.height = h; }
     this.W = w; this.H = h; this.dpr = dpr;
   }

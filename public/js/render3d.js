@@ -371,22 +371,28 @@ class Particles {
 
 // ------------------------------------------------------------ renderer
 export class Renderer3D {
-  constructor(canvas) {
+  // opts (for the graphics test page): env, shadows, bloom (default on),
+  // samples (multisampling, default 2), hud (the HTML overlay, default on)
+  constructor(canvas, opts = {}) {
     this.cv = canvas;
+    this.opts = opts;
     // same setup as fears-to-fathom: no anti-aliasing on the canvas itself,
     // the scene is drawn into a multisampled HDR target and post.js finishes it
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.gl.outputColorSpace = THREE.SRGBColorSpace;
     this.gl.toneMapping = THREE.NoToneMapping;
-    this.gl.shadowMap.enabled = true;
+    this.gl.shadowMap.enabled = opts.shadows !== false;
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.post = new Post(this.gl);
-    this.post.configure({ maxDpr: 1.5, samples: 2, bloom: true });
+    this.post.configure({ maxDpr: 1.5, samples: opts.samples ?? 2, bloom: opts.bloom !== false });
     this.quality = 1;
     this.slow = 0;
-    const pmrem = new THREE.PMREMGenerator(this.gl);
-    this.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    pmrem.dispose();
+    this.envMap = null;
+    if (opts.env !== false) {
+      const pmrem = new THREE.PMREMGenerator(this.gl);
+      this.envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+    }
     this.camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.5, 900);
     this.cam = { x: 0, y: 3, d: 30 };
     this.shake = 0;
@@ -397,7 +403,7 @@ export class Renderer3D {
     this.lost = false;
     canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.lost = true; });
     canvas.addEventListener('webglcontextrestored', () => { this.lost = false; if (this.cfg) this.reset(this.cfg, this.me); });
-    this.buildHud();
+    if (opts.hud !== false) this.buildHud();
   }
 
   pcolor(i) { return this.cfg.mode === 1 ? TEAM_COLORS[this.cfg.players[i].team] : PLAYER_COLORS[i % 4]; }
@@ -415,12 +421,13 @@ export class Renderer3D {
     s.background = skyTex(th);
     s.environment = this.envMap;
     s.environmentIntensity = 0.45;
+    if (!this.envMap) s.add(new THREE.AmbientLight(0xffffff, 0.5)); // stand-in for the reflections
     s.fog = new THREE.Fog(th.bottom, 70, 260);
 
     const hemi = new THREE.HemisphereLight(th.hemi[0], th.hemi[1], th.hemi[2]);
     s.add(hemi);
     const sun = (this.sun = new THREE.DirectionalLight(th.sun, th.sunI));
-    sun.castShadow = true;
+    sun.castShadow = this.opts.shadows !== false;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
@@ -512,6 +519,7 @@ export class Renderer3D {
     this.fx = []; // rings and KO beams
 
     // HUD
+    if (!this.hud) return;
     this.hudCards.innerHTML = '';
     this.cards = cfg.players.map((pc, i) => {
       const L = LEGENDS[pc.legend];
@@ -700,7 +708,7 @@ export class Renderer3D {
     if (!this.scene || this.lost) return;
     const k = dt / (1000 / FPS);
     this.t += dt / 1000;
-    const W = innerWidth, H = innerHeight;
+    const W = this.cv.clientWidth || innerWidth, H = this.cv.clientHeight || innerHeight;
     // adaptive resolution: drop it if frames are slow
     this.slow = this.slow * 0.97 + (dt > 26 ? 1 : 0) * 0.03;
     if (this.slow > 0.6 && this.quality > 0.6) { this.quality = Math.max(0.6, this.quality - 0.1); this.slow = 0; }
@@ -761,7 +769,7 @@ export class Renderer3D {
     this.smoke.mat.uniforms.scale.value = this.sparks.mat.uniforms.scale.value;
 
     this.post.render(target => { this.gl.setRenderTarget(target); this.gl.render(this.scene, this.camera); });
-    this.updateHud(s, hud, dt);
+    if (this.hud) this.updateHud(s, hud, dt);
   }
 
   poseFighter(F, p, s) {

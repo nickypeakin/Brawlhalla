@@ -1,5 +1,5 @@
 // The final picture, copied from nickypeakin/fears-to-fathom (client/post.js)
-// and trimmed for a fighting game. The scene renders in HDR into a
+// and trimmed for a fighting game (plus a guard against NaN pixels). The scene renders in HDR into a
 // multisampled target (the canvas itself has no anti-aliasing, which some
 // graphics drivers show as a black screen); a cheap two-level bloom makes
 // hits and the sun glow; then one pass tone-maps (ACES), sharpens and adds
@@ -17,6 +17,9 @@ const brightFrag = /* glsl */`
   varying vec2 vUv;
   void main() {
     vec3 c = texture2D(tex, vUv).rgb;
+    // some graphics chips produce invalid (NaN) pixels; blurred into the
+    // glow they would blacken the whole screen, so drop them here
+    if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
     float l = max(c.r, max(c.g, c.b));
     float k = smoothstep(threshold, threshold * 2.5, l);
     gl_FragColor = vec4(c * k, 1.0);
@@ -42,20 +45,22 @@ const finalFrag = /* glsl */`
   varying vec2 vUv;
 
   vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+  vec3 safe(vec3 c) { return (any(isnan(c)) || any(isinf(c))) ? vec3(0.0) : c; }
+  vec3 px3(vec2 uv) { return safe(texture2D(tex, uv).rgb); }
 
   void main() {
     vec2 uv = vUv;
     vec2 c = (uv - 0.5) * vec2(aspect, 1.0);
-    vec3 glow = (texture2D(bloomA, uv).rgb * 0.7 + texture2D(bloomB, uv).rgb * 0.9) * bloom;
+    vec3 glow = safe((texture2D(bloomA, uv).rgb * 0.7 + texture2D(bloomB, uv).rgb * 0.9) * bloom);
     float k = exposure;
-    vec3 col = aces((texture2D(tex, uv).rgb + glow) * k);
+    vec3 col = aces((px3(uv) + glow) * k);
     if (sharpen > 0.0) {
       // contrast-adaptive sharpening on the tone-mapped picture
       vec2 px = 1.0 / res;
-      vec3 n = aces((texture2D(tex, uv + vec2(0.0, px.y)).rgb + glow) * k);
-      vec3 so = aces((texture2D(tex, uv - vec2(0.0, px.y)).rgb + glow) * k);
-      vec3 e = aces((texture2D(tex, uv + vec2(px.x, 0.0)).rgb + glow) * k);
-      vec3 w = aces((texture2D(tex, uv - vec2(px.x, 0.0)).rgb + glow) * k);
+      vec3 n = aces((px3(uv + vec2(0.0, px.y)) + glow) * k);
+      vec3 so = aces((px3(uv - vec2(0.0, px.y)) + glow) * k);
+      vec3 e = aces((px3(uv + vec2(px.x, 0.0)) + glow) * k);
+      vec3 w = aces((px3(uv - vec2(px.x, 0.0)) + glow) * k);
       vec3 mn = min(col, min(min(n, so), min(e, w)));
       vec3 mx = max(col, max(max(n, so), max(e, w)));
       vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, vec3(0.0001)), 0.0, 1.0));

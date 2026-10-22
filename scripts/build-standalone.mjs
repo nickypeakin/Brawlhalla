@@ -49,6 +49,7 @@ console.log(`play.html and dist/index.html (${(html.length / 1024).toFixed(0)} K
 // test.html: the graphics test page (see public/js/gfxtest.js)
 const test = await build({
   entryPoints: [path.join(ROOT, 'public/js/gfxtest.js')],
+  plugins: [{ name: 'shared', setup(b) { b.onResolve({ filter: /^\/shared\// }, a => ({ path: path.join(ROOT, a.path) })); } }],
   bundle: true, write: false, format: 'iife', minify: true, target: ['chrome64', 'firefox62', 'safari12'],
 });
 const testHtml = `<!doctype html>
@@ -74,7 +75,7 @@ h1 { margin: 0 0 4px; font-size: 22px; }
 </head>
 <body>
 <h1>Brawlheim graphics test</h1>
-<p class="lead">Each box draws a picture a different way. Take a screenshot of this whole page and send it, so we can see which ones show up black on your computer.</p>
+<p class="lead">Each box draws a picture a different way. Boxes 8 to 14 run the real game with one feature switched off at a time. Scroll down and take screenshots of all 14 boxes, so we can see which ones show up black on your computer.</p>
 <div id="tests"></div>
 <div id="info"></div>
 <script>${test.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script>

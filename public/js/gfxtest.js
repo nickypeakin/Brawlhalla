@@ -2,6 +2,9 @@
 // ways so a player with a black game screen can show which ones work.
 import * as THREE from 'three';
 import { Post } from './post.js';
+import { LocalSession } from './session.js';
+import { Renderer } from './render.js';
+import { Renderer3D } from './render3d.js';
 
 const grid = document.getElementById('tests');
 const info = document.getElementById('info');
@@ -92,6 +95,42 @@ try {
   ok(t7);
 } catch (e) { bad(t7, e); }
 
+// the real game picture, with one feature switched off at a time
+const gameTests = [];
+function gameTest(n, title, make) {
+  const t = box(n, title, 'the game: sky, stage and fighters moving');
+  try {
+    const r = make(t.cv);
+    r.quiet = true;
+    const cfg = { seed: 42, map: 0, mode: 0, stocks: 3, time: 0, players: [0, 1, 2, 3].map(i => ({ legend: i, bot: 3, name: '' })) };
+    const sess = new LocalSession(cfg, [null, null, null, null]);
+    r.reset(cfg, -1);
+    gameTests.push({ t, r, sess, dead: false });
+    ok(t, 'running');
+  } catch (e) { bad(t, e); }
+}
+gameTest(8, 'Game in 3D (everything on, like the game)', cv => new Renderer3D(cv, { hud: false }));
+gameTest(9, 'Game in 3D, no reflections', cv => new Renderer3D(cv, { hud: false, env: false }));
+gameTest(10, 'Game in 3D, no shadows', cv => new Renderer3D(cv, { hud: false, shadows: false }));
+gameTest(11, 'Game in 3D, no glow', cv => new Renderer3D(cv, { hud: false, bloom: false }));
+gameTest(12, 'Game in 3D, no smoothing', cv => new Renderer3D(cv, { hud: false, samples: 0 }));
+gameTest(13, 'Game in 2D', cv => new Renderer(cv));
+gameTest(14, 'Game in 2D, Safe mode', cv => new Renderer(cv, { software: true }));
+
 info.textContent = `Browser: ${navigator.userAgent}\nScreen: ${innerWidth}x${innerHeight} at ${devicePixelRatio}x\nGraphics: ${glInfo}`;
 
-(function loop() { for (const f of threeTests) f(); requestAnimationFrame(loop); })();
+let last = performance.now();
+(function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.max(0, Math.min(100, (now || last) - last));
+  last = now || last;
+  for (const f of threeTests) f();
+  for (const g of gameTests) {
+    if (g.dead) continue;
+    try {
+      g.sess.update(dt);
+      const v = g.sess.view();
+      g.r.draw(v.s, v.evs, dt, null);
+    } catch (e) { g.dead = true; bad(g.t, e); }
+  }
+})();
