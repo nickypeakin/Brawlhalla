@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brawlheim</title>
+<meta name="description" content="A Brawlhalla-style platform fighter with online rollback multiplayer">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <section id="menu" class="screen">
+    <h1 class="logo">BRAWL<span>HEIM</span></h1>
+    <p class="tag">Platform fighting with online rollback netcode</p>
+    <div class="panel">
+      <label>Your name <input id="name" maxlength="16" placeholder="Brawler"></label>
+      <button id="btn-quick" class="big primary">Quick Play Online</button>
+      <div class="row">
+        <button id="btn-create">Create Private Room</button>
+        <input id="code" maxlength="4" placeholder="CODE" class="code">
+        <button id="btn-join">Join</button>
+      </div>
+      <button id="btn-local" class="big">Local Battle (Couch / vs Bots)</button>
+      <button id="btn-help">How to Play</button>
+      <p id="status" class="status"></p>
+    </div>
+  </section>
+
+  <section id="lobby" class="screen hidden">
+    <div class="panel wide">
+      <div class="lobby-head">
+        <h2>Room <span id="room-code" class="code-big"></span></h2>
+        <button id="btn-copy" class="small">Copy invite link</button>
+        <span class="spacer"></span>
+        <label class="inline">Controls <select id="online-device"></select></label>
+        <button id="btn-leave" class="small danger">Leave</button>
+      </div>
+      <div id="slots" class="slots"></div>
+      <div id="host-tools" class="settings">
+        <label>Map <select id="set-map"></select></label>
+        <label>Stocks <select id="set-stocks"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+        <label>Mode <select id="set-mode"><option value="0">Free for all</option><option value="1">Teams 2v2</option></select></label>
+        <label>Time <select id="set-time"><option value="0">No limit</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></label>
+        <button id="btn-addbot" class="small">+ Add bot</button>
+      </div>
+      <div class="lobby-foot">
+        <div id="spectators" class="muted"></div>
+        <span class="spacer"></span>
+        <button id="btn-ready" class="big primary">Ready</button>
+        <button id="btn-start" class="big">Start now</button>
+      </div>
+      <div class="chat">
+        <div id="chat-log"></div>
+        <input id="chat-in" maxlength="120" placeholder="Say something... (Enter)">
+      </div>
+    </div>
+  </section>
+
+  <section id="local" class="screen hidden">
+    <div class="panel wide">
+      <h2>Local Battle</h2>
+      <div id="local-slots" class="slots"></div>
+      <div class="settings">
+        <label>Map <select id="l-map"></select></label>
+        <label>Stocks <select id="l-stocks"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+        <label>Mode <select id="l-mode"><option value="0">Free for all</option><option value="1">Teams 2v2</option></select></label>
+        <label>Time <select id="l-time"><option value="0">No limit</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option></select></label>
+      </div>
+      <div class="lobby-foot">
+        <button id="btn-local-back">Back</button>
+        <span class="spacer"></span>
+        <button id="btn-local-start" class="big primary">Brawl!</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="help" class="screen hidden">
+    <div class="panel wide help">
+      <h2>How to Play</h2>
+      <p>Knock opponents off the stage. Every hit raises their damage %, and the higher it is the further they fly. Last fighter with stocks left wins.</p>
+      <table>
+        <tr><th></th><th>Keyboard</th><th>Alt keys</th><th>Gamepad</th></tr>
+        <tr><td>Move / aim</td><td>W A S D</td><td>Arrow keys</td><td>Left stick / D-pad</td></tr>
+        <tr><td>Jump (x3)</td><td>Space or W</td><td>Up arrow</td><td>A</td></tr>
+        <tr><td>Light attack</td><td>J</td><td>X / , / Numpad 1</td><td>X</td></tr>
+        <tr><td>Heavy / Signature</td><td>K</td><td>C / . / Numpad 2</td><td>B</td></tr>
+        <tr><td>Dodge / Dash</td><td>L or Shift</td><td>Z / / / Numpad 3</td><td>Bumpers / Triggers</td></tr>
+        <tr><td>Pick up / Throw</td><td>H</td><td>V / M / Numpad 0</td><td>Y</td></tr>
+      </table>
+      <ul>
+        <li><b>Lights</b> change with direction: neutral, side and down, on the ground and in the air.</li>
+        <li><b>Heavies</b> on the ground are big Signature moves. In the air, heavy = <b>Recovery</b> (once per jump), down + heavy = <b>Ground Pound</b>.</li>
+        <li>Grab the glowing <b>weapons</b> that fall from the sky (light attack or throw over them). Each legend has two weapons with their own moves. Throw them at people!</li>
+        <li>You get 3 jumps. Hold toward a wall to cling to it and wall-jump. Press down in the air to fast fall, or on a platform to drop through.</li>
+        <li>Getting hit refreshes your jumps, dodge and recovery, so you can always fight back.</li>
+        <li>In local play, two people can share a keyboard (WASD side and Arrows side) and up to 4 gamepads are supported.</li>
+      </ul>
+      <button id="btn-help-back" class="big">Back</button>
+    </div>
+  </section>
+
+  <section id="results" class="screen hidden">
+    <div class="panel wide">
+      <h1 id="res-title" class="logo small"></h1>
+      <table id="res-table" class="results"></table>
+      <div class="lobby-foot">
+        <span class="spacer"></span>
+        <button id="btn-res-again" class="big primary">Rematch</button>
+        <button id="btn-res-menu" class="big">Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pause" class="screen hidden">
+    <div class="panel">
+      <h2>Paused</h2>
+      <button id="btn-resume" class="big primary">Resume</button>
+      <button id="btn-quit" class="big danger">Quit match</button>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+<button id="btn-mute" title="Toggle sound">🔊</button>
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
