@@ -21,13 +21,9 @@ Up to 4 fighters per match. Modes are free-for-all or 2v2 teams, with 1–5 stoc
 
 To play with friends over the internet, deploy the server anywhere that runs Node and supports WebSockets (Render, Railway, Fly.io, a VPS…). A `Dockerfile` is included and the server honours `PORT`. For the same Wi-Fi, friends open `http://<your-LAN-ip>:3000`.
 
-## Publishing to GitHub Pages (one-time setup)
+## Play in the browser
 
-Same setup as fears-to-fathom: `.github/workflows/pages.yml` tests the game, builds it and publishes it on every push to the default branch. GitHub only needs to be told to use it once:
-1. In the repository, go to **Settings → Pages → Build and deployment → Source** and pick **GitHub Actions**.
-2. Re-run the workflow from the **Actions** tab, or push any change.
-
-The game is then at <https://nickypeakin.github.io/Brawlhalla/>. That version has local play and bots; online play needs the Node server.
+GitHub Pages publishes this branch, so the game is at <https://nickypeakin.github.io/Brawlhalla/> (it opens `play.html`). That version has local play and bots; online play needs the Node server. `npm run build` regenerates `play.html` after code changes.
 
 ## Controls
 
